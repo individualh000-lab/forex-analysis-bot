@@ -1,4 +1,3 @@
-cat > bot.py << 'EOF'
 import os
 import requests
 import json
@@ -8,7 +7,6 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 API_KEY = os.environ.get("API_KEY")
 
-# فایل ذخیره هشدارها
 ALERTS_FILE = "alerts.json"
 
 def load_alerts():
@@ -131,10 +129,10 @@ def get_news():
         data = r.json()
         if "news" in data and len(data["news"]) > 0:
             news = data["news"][0]
-            return f"📰 آخرین خبر:\n\n{news.get('title', 'بدون عنوان')}\n\n{news.get('summary', 'بدون توضیح')[:200]}..."
-        return "📰 خبر مهمی یافت نشد."
+            return f"📰 Latest News:\n\n{news.get('title', 'No title')}\n\n{news.get('summary', 'No summary')[:200]}..."
+        return "📰 No important news found."
     except:
-        return "📰 در حال حاضر امکان دریافت اخبار وجود ندارد."
+        return "📰 Unable to fetch news at this time."
 
 def format_analysis(d):
     return (
@@ -179,17 +177,6 @@ def settings_kb():
         [InlineKeyboardButton("🔕 Alert Sound", callback_data="set_sound")],
         [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")],
     ])
-
-def alerts_kb():
-    alerts = load_alerts()
-    text = "🔔 Price Alert\n━━━━━━━━━━━━━━━━\n\n"
-    if alerts:
-        for pair, price in alerts.items():
-            text += f"• {pair}: {price}\n"
-    else:
-        text += "هیچ هشدار فعالی ندارید.\n"
-    text += "\nبرای تنظیم هشدار جدید، /setalert [نماد] [قیمت]"
-    return text
 
 def category_kb():
     return InlineKeyboardMarkup([
@@ -239,8 +226,19 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             reply_markup=settings_kb()
         )
     elif data == "menu_alerts":
+        alerts = load_alerts()
+        text = "🔔 Price Alert\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        user_id = update.effective_user.id
+        user_alerts = {k: v for k, v in alerts.items() if str(k).endswith(str(user_id))}
+        if user_alerts:
+            for item, price in user_alerts.items():
+                pair = item.split("_")[0]
+                text += f"• {pair}: {price}\n"
+        else:
+            text += "No active alerts.\n"
+        text += "\n\nTo set a new alert:\n/setalert [SYMBOL] [PRICE]\nExample: /setalert EUR/USD 1.2000"
         await q.edit_message_text(
-            alerts_kb(),
+            text,
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
             ])
@@ -255,23 +253,9 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                  InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
             ])
         )
-    elif data == "set_lang":
+    elif data in ["set_lang", "set_pairs", "set_sound"]:
         await q.edit_message_text(
-            "🌍 Language Settings\n━━━━━━━━━━━━━━━━━━━━\n\nCurrently: English\n\nتغییر زبان به فارسی به زودی...",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Back", callback_data="menu_settings")]
-            ])
-        )
-    elif data == "set_pairs":
-        await q.edit_message_text(
-            "📊 Default Pairs\n━━━━━━━━━━━━━━━━━━━━\n\nSelect your favorite pairs (Coming Soon)",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Back", callback_data="menu_settings")]
-            ])
-        )
-    elif data == "set_sound":
-        await q.edit_message_text(
-            "🔕 Alert Sound\n━━━━━━━━━━━━━━━━━━━━\n\nSound notifications: 🔔 ON\n\n(Coming Soon)",
+            "🚧 Coming Soon!\nThis feature will be available soon.",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔙 Back", callback_data="menu_settings")]
             ])
@@ -279,7 +263,7 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("alert_"):
         symbol = data.replace("alert_", "")
         await q.edit_message_text(
-            f"🔔 Set Alert for {symbol}\n━━━━━━━━━━━━━━━━━━━━\n\nSend /setalert {symbol} [price]\n\nExample: /setalert {symbol} 1.2000",
+            f"🔔 Set Alert for {symbol}\n━━━━━━━━━━━━━━━━━━━━\n\nSend:\n/setalert {symbol} [price]\n\nExample: /setalert {symbol} 1.2000",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔙 Back", callback_data="analyze_"+symbol)]
             ])
@@ -332,7 +316,8 @@ async def set_alert(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         symbol = args[0].upper()
         price = float(args[1])
         alerts = load_alerts()
-        alerts[f"{symbol}_{update.effective_user.id}"] = price
+        key = f"{symbol}_{update.effective_user.id}"
+        alerts[key] = price
         save_alerts(alerts)
         await update.message.reply_text(f"✅ Alert set for {symbol} at {price}\nWe'll notify you when price reaches this level!")
     except:
@@ -348,4 +333,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-EOF
