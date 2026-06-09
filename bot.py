@@ -7,23 +7,10 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 API_KEY = os.environ.get("API_KEY")
 
-# Admin ID - Replace with your Telegram user ID
-ADMIN_ID = 8872922261  # Change this to your numeric ID from @userinfobot
+# Replace with your Telegram user ID (get from @userinfobot)
+ADMIN_ID = 8398420395
 
-# Files
-ALERTS_FILE = "alerts.json"
 USERS_FILE = "users.txt"
-
-def load_alerts():
-    try:
-        with open(ALERTS_FILE, "r") as f:
-            return json.load(f)
-    except:
-        return {}
-
-def save_alerts(alerts):
-    with open(ALERTS_FILE, "w") as f:
-        json.dump(alerts, f)
 
 def save_user(user_id):
     try:
@@ -32,7 +19,7 @@ def save_user(user_id):
         if str(user_id) not in users:
             with open(USERS_FILE, "a") as f:
                 f.write(f"{user_id}\n")
-    except FileNotFoundError:
+    except:
         with open(USERS_FILE, "w") as f:
             f.write(f"{user_id}\n")
 
@@ -43,189 +30,160 @@ def get_users_count():
     except:
         return 0
 
-MAJOR_PAIRS = {
-    "EUR/USD": "EUR/USD",
-    "GBP/USD": "GBP/USD",
-    "USD/JPY": "USD/JPY",
-    "USD/CHF": "USD/CHF",
-    "AUD/USD": "AUD/USD",
-    "USD/CAD": "USD/CAD",
-    "NZD/USD": "NZD/USD",
+# Language translations
+LANGUAGES = {
+    "english": {
+        "welcome": "🤖 FOREX ANALYSIS BOT\n━━━━━━━━━━━━━━━━━━━━\n\nWelcome to AI Forex Analysis! 👋",
+        "news_title": "📰 LATEST MARKET NEWS\n━━━━━━━━━━━━━━━━━━━━\n\n",
+        "no_news": "No breaking news at the moment.",
+        "users": "👥 Total Users:",
+        "admin_panel": "👑 ADMIN PANEL\n━━━━━━━━━━━━━━━━━━━━",
+        "settings": "⚙️ SETTINGS\n━━━━━━━━━━━━━━━━━━━━\n\nSelect your language:",
+        "currency": "💱 SELECT CATEGORY",
+        "major": "🔵 MAJOR PAIRS",
+        "gold": "💛 GOLD & OIL",
+        "minor": "📈 MINOR PAIRS",
+        "back": "🔙 Back",
+        "main_menu": "🏠 Main Menu",
+        "refresh": "🔄 Refresh",
+        "analyzing": "⏳ Analyzing",
+        "error": "❌ Could not fetch data",
+    },
+    "german": {
+        "welcome": "🤖 FOREX ANALYSIS BOT\n━━━━━━━━━━━━━━━━━━━━\n\nWillkommen beim KI-Forex-Analyse-Bot! 👋",
+        "news_title": "📰 NEUESTE MARKTNACHRICHTEN\n━━━━━━━━━━━━━━━━━━━━\n\n",
+        "no_news": "Aktuell keine Breaking News.",
+        "users": "👥 Gesamtbenutzer:",
+        "admin_panel": "👑 ADMIN-BEREICH\n━━━━━━━━━━━━━━━━━━━━",
+        "settings": "⚙️ EINSTELLUNGEN\n━━━━━━━━━━━━━━━━━━━━\n\nWähle deine Sprache:",
+        "currency": "💱 WÄHRUNGSKATEGORIE",
+        "major": "🔵 MAJOR-PAARE",
+        "gold": "💛 GOLD & ÖL",
+        "minor": "📈 MINOR-PAARE",
+        "back": "🔙 Zurück",
+        "main_menu": "🏠 Hauptmenü",
+        "refresh": "🔄 Aktualisieren",
+        "analyzing": "⏳ Analysiere",
+        "error": "❌ Daten konnten nicht abgerufen werden",
+    },
+    "french": {
+        "welcome": "🤖 FOREX ANALYSIS BOT\n━━━━━━━━━━━━━━━━━━━━\n\nBienvenue sur l'analyse Forex IA! 👋",
+        "news_title": "📰 DERNIÈRES ACTUALITÉS\n━━━━━━━━━━━━━━━━━━━━\n\n",
+        "no_news": "Pas d'actualités pour le moment.",
+        "users": "👥 Utilisateurs totaux:",
+        "admin_panel": "👑 PANEL ADMIN\n━━━━━━━━━━━━━━━━━━━━",
+        "settings": "⚙️ PARAMÈTRES\n━━━━━━━━━━━━━━━━━━━━\n\nChoisis ta langue:",
+        "currency": "💱 CATÉGORIE DE DEVISE",
+        "major": "🔵 Paires majeures",
+        "gold": "💛 Or & Pétrole",
+        "minor": "📈 Paires mineures",
+        "back": "🔙 Retour",
+        "main_menu": "🏠 Menu principal",
+        "refresh": "🔄 Actualiser",
+        "analyzing": "⏳ Analyse en cours",
+        "error": "❌ Impossible de récupérer les données",
+    },
+    "spanish": {
+        "welcome": "🤖 FOREX ANALYSIS BOT\n━━━━━━━━━━━━━━━━━━━━\n\n¡Bienvenido al análisis Forex con IA! 👋",
+        "news_title": "📰 ÚLTIMAS NOTICIAS\n━━━━━━━━━━━━━━━━━━━━\n\n",
+        "no_news": "No hay noticias de último momento.",
+        "users": "👥 Usuarios totales:",
+        "admin_panel": "👑 PANEL ADMIN\n━━━━━━━━━━━━━━━━━━━━",
+        "settings": "⚙️ CONFIGURACIÓN\n━━━━━━━━━━━━━━━━━━━━\n\nSelecciona tu idioma:",
+        "currency": "💱 CATEGORÍA DE DIVISAS",
+        "major": "🔵 Pares principales",
+        "gold": "💛 Oro & Petróleo",
+        "minor": "📈 Pares menores",
+        "back": "🔙 Atrás",
+        "main_menu": "🏠 Menú principal",
+        "refresh": "🔄 Actualizar",
+        "analyzing": "⏳ Analizando",
+        "error": "❌ No se pudieron obtener los datos",
+    },
+    "chinese": {
+        "welcome": "🤖 外汇分析机器人\n━━━━━━━━━━━━━━━━━━━━\n\n欢迎使用AI外汇分析！👋",
+        "news_title": "📰 最新市场新闻\n━━━━━━━━━━━━━━━━━━━━\n\n",
+        "no_news": "暂无重大新闻。",
+        "users": "👥 总用户数:",
+        "admin_panel": "👑 管理员面板\n━━━━━━━━━━━━━━━━━━━━",
+        "settings": "⚙️ 设置\n━━━━━━━━━━━━━━━━━━━━\n\n选择你的语言:",
+        "currency": "💱 货币类别",
+        "major": "🔵 主要货币对",
+        "gold": "💛 黄金和石油",
+        "minor": "📈 次要货币对",
+        "back": "🔙 返回",
+        "main_menu": "🏠 主菜单",
+        "refresh": "🔄 刷新",
+        "analyzing": "⏳ 分析中",
+        "error": "❌ 无法获取数据",
+    }
 }
 
-MINOR_PAIRS = {
-    "EUR/GBP": "EUR/GBP",
-    "EUR/JPY": "EUR/JPY",
-    "GBP/JPY": "GBP/JPY",
-    "AUD/JPY": "AUD/JPY",
-}
+# Store user language
+user_lang = {}
 
-GOLD_OIL = {
-    "XAU/USD": "XAU/USD",
-    "XAG/USD": "XAG/USD",
-    "WTI/USD": "WTI/USD",
-}
-
-def get_analysis(symbol):
-    try:
-        url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval=1h&outputsize=50&apikey={API_KEY}"
-        r = requests.get(url, timeout=10)
-        data = r.json()
-        if "values" not in data:
-            return None
-        values = data["values"]
-        closes = [float(v["close"]) for v in values]
-        highs = [float(v["high"]) for v in values]
-        lows = [float(v["low"]) for v in values]
-        price = closes[0]
-        gains, losses = [], []
-        for i in range(1, 15):
-            diff = closes[i-1] - closes[i]
-            (gains if diff > 0 else losses).append(abs(diff))
-        avg_gain = sum(gains)/14 if gains else 0
-        avg_loss = sum(losses)/14 if losses else 0.001
-        rsi = round(100 - (100 / (1 + avg_gain/avg_loss)), 1)
-        ema12 = sum(closes[:12])/12
-        ema26 = sum(closes[:26])/26
-        macd = ema12 - ema26
-        ma20 = sum(closes[:20])/20
-        s1 = round(min(lows[:10]), 4)
-        s2 = round(min(lows[:20]), 4)
-        r1 = round(max(highs[:10]), 4)
-        r2 = round(max(highs[:20]), 4)
-        trend = "🟢 Bullish" if price > ma20 else "🔴 Bearish"
-        signal = "🟢 BUY" if (rsi < 60 and macd > 0 and price > ma20) else \
-                 "🔴 SELL" if (rsi > 60 and macd < 0 and price < ma20) else "🟡 NEUTRAL"
-        rsi_label = "Overbought" if rsi > 70 else "Oversold" if rsi < 30 else "Neutral"
-        open_ = float(values[0]["open"])
-        body = abs(price - open_)
-        wick_up = float(values[0]["high"]) - max(price, open_)
-        wick_down = min(price, open_) - float(values[0]["low"])
-        if wick_down > body * 2:
-            candle = "Hammer 🔨\nPossible bullish continuation."
-        elif wick_up > body * 2:
-            candle = "Shooting Star 🌠\nPossible bearish reversal."
-        else:
-            candle = "Doji ✳️\nMarket indecision."
-        if "BUY" in signal:
-            entry_low = round(price*0.9990, 4)
-            entry_high = round(price*1.0005, 4)
-            tp1 = round(price*1.005, 4)
-            tp2 = round(price*1.010, 4)
-            sl = round(price*0.995, 4)
-        else:
-            entry_low = round(price*0.9995, 4)
-            entry_high = round(price*1.0010, 4)
-            tp1 = round(price*0.995, 4)
-            tp2 = round(price*0.990, 4)
-            sl = round(price*1.005, 4)
-        score = 0
-        if "BUY" in signal or "SELL" in signal:
-            score += 2
-        if rsi_label == "Neutral":
-            score += 1
-        if abs(macd) > 0:
-            score += 1
-        confidence_pct = min(95, 60 + score*8)
-        stars = "⭐"*(score+1) + "☆"*(5-score-1)
-        risk = "Low 🟢" if confidence_pct > 80 else "Medium 🟡" if confidence_pct > 65 else "High 🔴"
-        return {
-            "symbol": symbol, "price": price,
-            "trend": trend, "signal": signal,
-            "rsi": rsi, "rsi_label": rsi_label,
-            "macd": "Bullish 🟢" if macd > 0 else "Bearish 🔴",
-            "ma": "Buy 🟢" if price > ma20 else "Sell 🔴",
-            "momentum": "Positive 🟢" if closes[0] > closes[5] else "Negative 🔴",
-            "s1": s1, "s2": s2, "r1": r1, "r2": r2,
-            "candle": candle,
-            "entry_low": entry_low, "entry_high": entry_high,
-            "tp1": tp1, "tp2": tp2, "sl": sl,
-            "stars": stars, "confidence_pct": confidence_pct, "risk": risk,
-        }
-    except:
-        return None
+MAJOR_PAIRS = ["EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF", "AUD/USD", "USD/CAD", "NZD/USD"]
+MINOR_PAIRS = ["EUR/GBP", "EUR/JPY", "GBP/JPY", "AUD/JPY"]
+GOLD_OIL = ["XAU/USD", "XAG/USD", "WTI/USD"]
 
 def get_news():
     try:
-        # Try different news API endpoint
-        url = f"https://api.twelvedata.com/news?symbol=EUR/USD&apikey={API_KEY}"
+        # Use free Forex News API
+        url = "https://api.twelvedata.com/news?symbol=EUR/USD&apikey=" + API_KEY
         r = requests.get(url, timeout=10)
         data = r.json()
         
-        # Check if news exists
         if "news" in data and len(data["news"]) > 0:
-            news_list = data["news"][:3]  # Get latest 3 news
-            result = "📰 **Latest Market News**\n━━━━━━━━━━━━━━━━━━━━\n\n"
-            for news in news_list:
+            news_items = data["news"][:5]
+            result = ""
+            for news in news_items:
                 title = news.get('title', 'No title')
                 source = news.get('source', 'Unknown')
-                result += f"📌 **{title}**\n📡 Source: {source}\n\n"
+                result += f"📌 **{title}**\n📡 {source}\n\n"
             return result
         else:
-            # Fallback to forex news API
-            fallback_url = f"https://api.twelvedata.com/earnings?symbol=EUR/USD&apikey={API_KEY}"
-            r2 = requests.get(fallback_url, timeout=10)
-            data2 = r2.json()
-            if "data" in data2 and len(data2["data"]) > 0:
-                return "📰 **Economic Calendar**\n━━━━━━━━━━━━━━━━━━━━\n\nNo major news today."
-            return "📰 No breaking news at the moment.\n\n💡 Tip: Check major economic events on Forex Factory."
-    except Exception as e:
-        return f"📰 Market news temporarily unavailable.\n\n💡 For latest updates, visit:\n• Forex Factory\n• Bloomberg\n• Reuters"
+            return "📰 No major news at this moment.\n\n💡 Check Forex Factory for latest updates."
+    except:
+        return "📰 News feed temporarily unavailable.\n\n💡 Visit: https://www.forexfactory.com"
 
-def format_analysis(d):
-    return (
-        f"🚀 {d['symbol']} • AI Market Analysis\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"💲 Current Price   {d['price']}\n"
-        f"📈 Market Trend    {d['trend']}\n"
-        f"🎯 Trading Signal  {d['signal']}\n\n"
-        f"📊 Technical Indicators\n"
-        f"• RSI (14): {d['rsi']} → {d['rsi_label']}\n"
-        f"• MACD: {d['macd']}\n"
-        f"• Moving Average: {d['ma']}\n"
-        f"• Momentum: {d['momentum']}\n\n"
-        f"🟢 Support Levels\n"
-        f"S1 → {d['s1']}   S2 → {d['s2']}\n"
-        f"🔴 Resistance Levels\n"
-        f"R1 → {d['r1']}   R2 → {d['r2']}\n\n"
-        f"🕯 Candlestick Pattern\n"
-        f"{d['candle']}\n\n"
-        f"🎯 Suggested Trade Plan\n"
-        f"📍 Entry:  {d['entry_low']} – {d['entry_high']}\n"
-        f"🎯 TP1: {d['tp1']}  |  TP2: {d['tp2']}\n"
-        f"🛡 SL:  {d['sl']}\n\n"
-        f"📊 AI Confidence  {d['stars']} ({d['confidence_pct']}%)\n"
-        f"⚠️ Risk Level: {d['risk']}\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"⚠️ For educational purposes only"
-    )
+def get_price(symbol):
+    try:
+        url = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={API_KEY}"
+        r = requests.get(url, timeout=10)
+        data = r.json()
+        return data.get('price', 'N/A')
+    except:
+        return 'N/A'
 
-def main_menu_kb():
+def get_text(key, lang='english'):
+    return LANGUAGES.get(lang, LANGUAGES['english']).get(key, key)
+
+def main_menu_kb(lang='english'):
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📊 Forex Currencies", callback_data="menu_currencies")],
-        [InlineKeyboardButton("🔔 Price Alert", callback_data="menu_alerts"),
-         InlineKeyboardButton("📰 Market News", callback_data="market_news")],
+        [InlineKeyboardButton("📊 Forex", callback_data="menu_currencies")],
+        [InlineKeyboardButton("🔔 Alert", callback_data="menu_alerts"),
+         InlineKeyboardButton("📰 News", callback_data="market_news")],
         [InlineKeyboardButton("⚙️ Settings", callback_data="menu_settings"),
          InlineKeyboardButton("👑 Admin", callback_data="admin_panel")],
     ])
 
 def settings_kb():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🌍 Language (English)", callback_data="set_lang")],
-        [InlineKeyboardButton("📊 Default Pair (EUR/USD)", callback_data="set_pairs")],
-        [InlineKeyboardButton("🔔 Alert Sound (ON)", callback_data="set_sound")],
+        [InlineKeyboardButton("🇬🇧 English", callback_data="lang_english"),
+         InlineKeyboardButton("🇩🇪 Deutsch", callback_data="lang_german")],
+        [InlineKeyboardButton("🇫🇷 Français", callback_data="lang_french"),
+         InlineKeyboardButton("🇪🇸 Español", callback_data="lang_spanish")],
+        [InlineKeyboardButton("🇨🇳 中文", callback_data="lang_chinese")],
         [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")],
     ])
 
 def admin_kb():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📊 Total Users", callback_data="admin_stats")],
-        [InlineKeyboardButton("📨 Broadcast Message", callback_data="admin_broadcast")],
-        [InlineKeyboardButton("📈 Bot Status", callback_data="admin_status")],
+        [InlineKeyboardButton("📊 User Stats", callback_data="admin_stats")],
         [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")],
     ])
 
-def category_kb():
+def category_kb(lang='english'):
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🔵 Major Pairs", callback_data="cat_major")],
         [InlineKeyboardButton("💛 Gold & Oil", callback_data="cat_gold")],
@@ -233,112 +191,66 @@ def category_kb():
         [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")],
     ])
 
-def pairs_kb(pairs, back):
-    keys = list(pairs.keys())
-    rows = [[InlineKeyboardButton(k, callback_data=f"analyze_{k}") for k in keys[i:i+2]]
-            for i in range(0, len(keys), 2)]
-    rows.append([InlineKeyboardButton("🔙 Back", callback_data=back),
-                 InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")])
+def pairs_kb(pairs, back, lang='english'):
+    rows = [[InlineKeyboardButton(p, callback_data=f"price_{p}")] for p in pairs]
+    rows.append([InlineKeyboardButton(get_text('back', lang), callback_data=back),
+                 InlineKeyboardButton(get_text('main_menu', lang), callback_data="main_menu")])
     return InlineKeyboardMarkup(rows)
-
-def after_analysis_kb(symbol, back):
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔄 Refresh", callback_data=f"analyze_{symbol}"),
-         InlineKeyboardButton("🔙 Back", callback_data=back)],
-        [InlineKeyboardButton("🔔 Set Alert", callback_data=f"alert_{symbol}")],
-    ])
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     save_user(user_id)
+    lang = user_lang.get(user_id, 'english')
     await update.message.reply_text(
-        "🤖 FOREX ANALYSIS BOT\n"
-        "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Welcome to AI Forex Analysis! 👋\n"
-        "Select an option below 👇",
-        reply_markup=main_menu_kb()
+        get_text('welcome', lang),
+        reply_markup=main_menu_kb(lang)
     )
 
 async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
     data = q.data
-    
+    user_id = update.effective_user.id
+    lang = user_lang.get(user_id, 'english')
+
     if data == "main_menu":
         await q.edit_message_text(
-            "🤖 FOREX ANALYSIS BOT\n━━━━━━━━━━━━━━━━━━━━\n\nWelcome! Select an option 👇",
-            reply_markup=main_menu_kb()
+            get_text('welcome', lang),
+            reply_markup=main_menu_kb(lang)
         )
     elif data == "menu_settings":
         await q.edit_message_text(
-            "⚙️ Settings\n━━━━━━━━━━━━━━━━━━━━\n\nChoose an option:",
+            get_text('settings', lang),
             reply_markup=settings_kb()
         )
+    elif data.startswith("lang_"):
+        new_lang = data.replace("lang_", "")
+        user_lang[user_id] = new_lang
+        await q.edit_message_text(
+            f"✅ Language changed to {new_lang.upper()}!\n\n{get_text('welcome', new_lang)}",
+            reply_markup=main_menu_kb(new_lang)
+        )
     elif data == "admin_panel":
-        if update.effective_user.id != ADMIN_ID:
-            await q.edit_message_text("⛔ Only admin can access this panel!")
+        if user_id != ADMIN_ID:
+            await q.edit_message_text("⛔ Access denied!", reply_markup=main_menu_kb(lang))
             return
         await q.edit_message_text(
-            "👑 Admin Panel\n━━━━━━━━━━━━━━━━━━━━\n\nWelcome Admin!",
+            f"{get_text('admin_panel', lang)}\n\n{get_text('users', lang)} {get_users_count()}",
             reply_markup=admin_kb()
         )
     elif data == "admin_stats":
-        if update.effective_user.id != ADMIN_ID:
-            await q.edit_message_text("⛔ Access denied!")
-            return
-        users_count = get_users_count()
-        await q.edit_message_text(
-            f"📊 Bot Statistics\n━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"👥 Total Users: {users_count}\n"
-            f"✅ Bot Status: Active\n"
-            f"📈 Uptime: 24/7",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Back to Admin", callback_data="admin_panel"),
-                 InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
-            ])
-        )
-    elif data == "admin_status":
-        if update.effective_user.id != ADMIN_ID:
+        if user_id != ADMIN_ID:
             await q.edit_message_text("⛔ Access denied!")
             return
         await q.edit_message_text(
-            "📈 Bot Status\n━━━━━━━━━━━━━━━━━━━━\n\n"
-            "✅ Bot is running smoothly\n"
-            "🌐 Hosted on Railway\n"
-            "🕐 24/7 Active\n"
-            "🔗 GitHub: forex-analysis-bot",
+            f"📊 Bot Statistics\n━━━━━━━━━━━━━━━━━━━━\n\n👥 Total Users: {get_users_count()}\n✅ Status: Active\n🌐 24/7 Online",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Back to Admin", callback_data="admin_panel"),
-                 InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
-            ])
-        )
-    elif data == "admin_broadcast":
-        if update.effective_user.id != ADMIN_ID:
-            await q.edit_message_text("⛔ Access denied!")
-            return
-        ctx.user_data['broadcast_mode'] = True
-        await q.edit_message_text(
-            "📨 Broadcast Mode Activated\n━━━━━━━━━━━━━━━━━━━━\n\n"
-            "Send me the message you want to broadcast to all users.\n\n"
-            "Type /cancel to exit broadcast mode.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
+                [InlineKeyboardButton("🔙 Back", callback_data="admin_panel")]
             ])
         )
     elif data == "menu_alerts":
-        alerts = load_alerts()
-        text = "🔔 Price Alert\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        user_id = update.effective_user.id
-        user_alerts = {k: v for k, v in alerts.items() if str(k).endswith(str(user_id))}
-        if user_alerts:
-            for item, price in user_alerts.items():
-                pair = item.split("_")[0]
-                text += f"• {pair}: {price}\n"
-        else:
-            text += "No active alerts.\n"
-        text += "\n\nTo set a new alert:\n/setalert [SYMBOL] [PRICE]\nExample: /setalert EUR/USD 1.2000"
         await q.edit_message_text(
-            text,
+            "🔔 Price Alert\n━━━━━━━━━━━━━━━━━━━━\n\nSend /setalert [SYMBOL] [PRICE]\n\nExample:\n/setalert EUR/USD 1.2000",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
             ])
@@ -347,65 +259,44 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await q.edit_message_text("⏳ Fetching latest news...")
         news = get_news()
         await q.edit_message_text(
-            news,
+            f"{get_text('news_title', lang)}{news}",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔄 Refresh", callback_data="market_news"),
-                 InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
-            ])
-        )
-    elif data in ["set_lang", "set_pairs", "set_sound"]:
-        await q.edit_message_text(
-            "✅ Feature Coming Soon!\nThis setting will be available in the next update.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Back to Settings", callback_data="menu_settings")]
-            ])
-        )
-    elif data.startswith("alert_"):
-        symbol = data.replace("alert_", "")
-        await q.edit_message_text(
-            f"🔔 Set Alert for {symbol}\n━━━━━━━━━━━━━━━━━━━━\n\nSend:\n/setalert {symbol} [price]\n\nExample: /setalert {symbol} 1.2000",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Back", callback_data="analyze_"+symbol)]
+                [InlineKeyboardButton(get_text('refresh', lang), callback_data="market_news"),
+                 InlineKeyboardButton(get_text('main_menu', lang), callback_data="main_menu")]
             ])
         )
     elif data == "menu_currencies":
         await q.edit_message_text(
-            "💱 SELECT CATEGORY\n━━━━━━━━━━━━━━━━━━━━\n\nChoose a category 👇",
-            reply_markup=category_kb()
+            get_text('currency', lang),
+            reply_markup=category_kb(lang)
         )
     elif data == "cat_major":
         await q.edit_message_text(
-            "🔵 MAJOR PAIRS\n━━━━━━━━━━━━━━━━━━━━\n\nSelect a pair 👇",
-            reply_markup=pairs_kb(MAJOR_PAIRS, "menu_currencies")
+            get_text('major', lang),
+            reply_markup=pairs_kb(MAJOR_PAIRS, "menu_currencies", lang)
         )
     elif data == "cat_gold":
         await q.edit_message_text(
-            "💛 GOLD & OIL\n━━━━━━━━━━━━━━━━━━━━\n\nSelect a pair 👇",
-            reply_markup=pairs_kb(GOLD_OIL, "menu_currencies")
+            get_text('gold', lang),
+            reply_markup=pairs_kb(GOLD_OIL, "menu_currencies", lang)
         )
     elif data == "cat_minor":
         await q.edit_message_text(
-            "📈 MINOR PAIRS\n━━━━━━━━━━━━━━━━━━━━\n\nSelect a pair 👇",
-            reply_markup=pairs_kb(MINOR_PAIRS, "menu_currencies")
+            get_text('minor', lang),
+            reply_markup=pairs_kb(MINOR_PAIRS, "menu_currencies", lang)
         )
-    elif data.startswith("analyze_"):
-        symbol = data.replace("analyze_", "")
-        await q.edit_message_text(f"⏳ Analyzing {symbol}...")
-        result = get_analysis(symbol)
-        if result:
-            back = "cat_major" if symbol in MAJOR_PAIRS else \
-                   "cat_gold" if symbol in GOLD_OIL else "cat_minor"
-            await q.edit_message_text(
-                format_analysis(result),
-                reply_markup=after_analysis_kb(symbol, back)
-            )
-        else:
-            await q.edit_message_text(
-                f"❌ Could not fetch data for {symbol}.\nTry again later.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🔙 Back", callback_data="menu_currencies")]
-                ])
-            )
+    elif data.startswith("price_"):
+        symbol = data.replace("price_", "")
+        await q.edit_message_text(f"⏳ Getting {symbol} price...")
+        price = get_price(symbol)
+        await q.edit_message_text(
+            f"💱 {symbol}\n━━━━━━━━━━━━━━━━━━━━\n\n💰 Current Price: {price}\n\nPowered by Twelve Data",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔄 Refresh", callback_data=f"price_{symbol}"),
+                 InlineKeyboardButton("🔙 Back", callback_data="cat_major" if symbol in MAJOR_PAIRS else "cat_gold" if symbol in GOLD_OIL else "cat_minor")],
+                [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
+            ])
+        )
 
 async def set_alert(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     try:
@@ -415,53 +306,14 @@ async def set_alert(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             return
         symbol = args[0].upper()
         price = float(args[1])
-        alerts = load_alerts()
-        key = f"{symbol}_{update.effective_user.id}"
-        alerts[key] = price
-        save_alerts(alerts)
-        await update.message.reply_text(f"✅ Alert set for {symbol} at {price}\nWe'll notify you when price reaches this level!")
+        await update.message.reply_text(f"✅ Alert set for {symbol} at {price}\n\nYou will be notified when price reaches this level!\n\n(Notification system coming soon)")
     except:
         await update.message.reply_text("❌ Invalid format. Use: /setalert EUR/USD 1.2000")
-
-async def broadcast(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("⛔ Only admin can broadcast!")
-        return
-    
-    if ctx.user_data.get('broadcast_mode'):
-        message_text = update.message.text
-        if message_text == '/cancel':
-            ctx.user_data['broadcast_mode'] = False
-            await update.message.reply_text("❌ Broadcast mode cancelled.")
-            return
-        
-        await update.message.reply_text("📨 Sending broadcast to all users...")
-        
-        try:
-            with open(USERS_FILE, "r") as f:
-                users = f.read().splitlines()
-            
-            success = 0
-            fail = 0
-            
-            for user_id in users:
-                try:
-                    await ctx.bot.send_message(chat_id=int(user_id), text=f"📢 **Announcement**\n\n{message_text}")
-                    success += 1
-                except:
-                    fail += 1
-            
-            await update.message.reply_text(f"✅ Broadcast complete!\n\n✅ Sent: {success}\n❌ Failed: {fail}")
-        except Exception as e:
-            await update.message.reply_text(f"❌ Error: {e}")
-        
-        ctx.user_data['broadcast_mode'] = False
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("setalert", set_alert))
-    app.add_handler(CommandHandler("broadcast", broadcast))
     app.add_handler(CallbackQueryHandler(button))
     print("✅ Bot is running...")
     app.run_polling()
