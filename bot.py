@@ -1,10 +1,26 @@
+cat > bot.py << 'EOF'
 import os
 import requests
+import json
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 API_KEY = os.environ.get("API_KEY")
+
+# فایل ذخیره هشدارها
+ALERTS_FILE = "alerts.json"
+
+def load_alerts():
+    try:
+        with open(ALERTS_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_alerts(alerts):
+    with open(ALERTS_FILE, "w") as f:
+        json.dump(alerts, f)
 
 MAJOR_PAIRS = {
     "EUR/USD": "EUR/USD",
@@ -108,6 +124,18 @@ def get_analysis(symbol):
     except:
         return None
 
+def get_news():
+    try:
+        url = f"https://api.twelvedata.com/news?symbol=EUR/USD&apikey={API_KEY}"
+        r = requests.get(url, timeout=10)
+        data = r.json()
+        if "news" in data and len(data["news"]) > 0:
+            news = data["news"][0]
+            return f"📰 آخرین خبر:\n\n{news.get('title', 'بدون عنوان')}\n\n{news.get('summary', 'بدون توضیح')[:200]}..."
+        return "📰 خبر مهمی یافت نشد."
+    except:
+        return "📰 در حال حاضر امکان دریافت اخبار وجود ندارد."
+
 def format_analysis(d):
     return (
         f"🚀 {d['symbol']} • AI Market Analysis\n"
@@ -139,10 +167,29 @@ def format_analysis(d):
 def main_menu_kb():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 Forex Currencies", callback_data="menu_currencies")],
-        [InlineKeyboardButton("🔔 Price Alert", callback_data="coming_soon"),
-         InlineKeyboardButton("📰 Market News", callback_data="coming_soon")],
-        [InlineKeyboardButton("⚙️ Settings", callback_data="coming_soon")],
+        [InlineKeyboardButton("🔔 Price Alert", callback_data="menu_alerts"),
+         InlineKeyboardButton("📰 Market News", callback_data="market_news")],
+        [InlineKeyboardButton("⚙️ Settings", callback_data="menu_settings")],
     ])
+
+def settings_kb():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🌍 Language", callback_data="set_lang")],
+        [InlineKeyboardButton("📊 Default Pairs", callback_data="set_pairs")],
+        [InlineKeyboardButton("🔕 Alert Sound", callback_data="set_sound")],
+        [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")],
+    ])
+
+def alerts_kb():
+    alerts = load_alerts()
+    text = "🔔 Price Alert\n━━━━━━━━━━━━━━━━\n\n"
+    if alerts:
+        for pair, price in alerts.items():
+            text += f"• {pair}: {price}\n"
+    else:
+        text += "هیچ هشدار فعالی ندارید.\n"
+    text += "\nبرای تنظیم هشدار جدید، /setalert [نماد] [قیمت]"
+    return text
 
 def category_kb():
     return InlineKeyboardMarkup([
@@ -164,6 +211,7 @@ def after_analysis_kb(symbol, back):
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🔄 Refresh", callback_data=f"analyze_{symbol}"),
          InlineKeyboardButton("🔙 Back", callback_data=back)],
+        [InlineKeyboardButton("🔔 Set Alert", callback_data=f"alert_{symbol}")],
     ])
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -179,10 +227,62 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
     data = q.data
+    
     if data == "main_menu":
         await q.edit_message_text(
             "🤖 FOREX ANALYSIS BOT\n━━━━━━━━━━━━━━━━━━━━\n\nWelcome! Select an option 👇",
             reply_markup=main_menu_kb()
+        )
+    elif data == "menu_settings":
+        await q.edit_message_text(
+            "⚙️ Settings\n━━━━━━━━━━━━━━━━━━━━\n\nChoose an option:",
+            reply_markup=settings_kb()
+        )
+    elif data == "menu_alerts":
+        await q.edit_message_text(
+            alerts_kb(),
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
+            ])
+        )
+    elif data == "market_news":
+        await q.edit_message_text("⏳ Fetching latest news...")
+        news = get_news()
+        await q.edit_message_text(
+            news,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔄 Refresh", callback_data="market_news"),
+                 InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
+            ])
+        )
+    elif data == "set_lang":
+        await q.edit_message_text(
+            "🌍 Language Settings\n━━━━━━━━━━━━━━━━━━━━\n\nCurrently: English\n\nتغییر زبان به فارسی به زودی...",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Back", callback_data="menu_settings")]
+            ])
+        )
+    elif data == "set_pairs":
+        await q.edit_message_text(
+            "📊 Default Pairs\n━━━━━━━━━━━━━━━━━━━━\n\nSelect your favorite pairs (Coming Soon)",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Back", callback_data="menu_settings")]
+            ])
+        )
+    elif data == "set_sound":
+        await q.edit_message_text(
+            "🔕 Alert Sound\n━━━━━━━━━━━━━━━━━━━━\n\nSound notifications: 🔔 ON\n\n(Coming Soon)",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Back", callback_data="menu_settings")]
+            ])
+        )
+    elif data.startswith("alert_"):
+        symbol = data.replace("alert_", "")
+        await q.edit_message_text(
+            f"🔔 Set Alert for {symbol}\n━━━━━━━━━━━━━━━━━━━━\n\nSend /setalert {symbol} [price]\n\nExample: /setalert {symbol} 1.2000",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Back", callback_data="analyze_"+symbol)]
+            ])
         )
     elif data == "menu_currencies":
         await q.edit_message_text(
@@ -222,20 +322,30 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("🔙 Back", callback_data="menu_currencies")]
                 ])
             )
-    elif data == "coming_soon":
-        await q.edit_message_text(
-            "🚧 Coming Soon!\nThis feature will be available soon.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
-            ])
-        )
+
+async def set_alert(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    try:
+        args = ctx.args
+        if len(args) < 2:
+            await update.message.reply_text("⚠️ Usage: /setalert [SYMBOL] [PRICE]\nExample: /setalert EUR/USD 1.2000")
+            return
+        symbol = args[0].upper()
+        price = float(args[1])
+        alerts = load_alerts()
+        alerts[f"{symbol}_{update.effective_user.id}"] = price
+        save_alerts(alerts)
+        await update.message.reply_text(f"✅ Alert set for {symbol} at {price}\nWe'll notify you when price reaches this level!")
+    except:
+        await update.message.reply_text("❌ Invalid format. Use: /setalert EUR/USD 1.2000")
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("setalert", set_alert))
     app.add_handler(CallbackQueryHandler(button))
     print("✅ Bot is running...")
     app.run_polling()
 
 if __name__ == "__main__":
     main()
+EOF
