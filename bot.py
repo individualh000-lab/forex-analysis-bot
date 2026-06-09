@@ -6,35 +6,75 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 API_KEY = os.environ.get("API_KEY")
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+REPO_NAME = os.environ.get("REPO_NAME", "individualh000-lab/forex-analysis-bot")
 
-# Replace with your Telegram user ID from @userinfobot
-ADMIN_ID = 8398420395
+ADMIN_ID = 8398420395  # Replace with your Telegram user ID
 
 USERS_FILE = "users.txt"
+GITHUB_PATH = "users.txt"
+
+def save_users_to_github(users_list):
+    try:
+        url = f"https://api.github.com/repos/{REPO_NAME}/contents/{GITHUB_PATH}"
+        content = "\n".join(users_list)
+        content_encoded = content.encode('utf-8').decode('utf-8')
+        
+        # Try to get existing file
+        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            # File exists, update it
+            file_data = response.json()
+            data = {
+                "message": "Update users list",
+                "content": content.encode('utf-8').decode('utf-8'),
+                "sha": file_data["sha"]
+            }
+            requests.put(url, headers=headers, json=data)
+        else:
+            # File doesn't exist, create it
+            data = {
+                "message": "Create users list",
+                "content": content.encode('utf-8').decode('utf-8')
+            }
+            requests.put(url, headers=headers, json=data)
+        return True
+    except Exception as e:
+        print(f"GitHub save error: {e}")
+        return False
+
+def load_users_from_github():
+    try:
+        url = f"https://api.github.com/repos/{REPO_NAME}/contents/{GITHUB_PATH}"
+        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            file_data = response.json()
+            import base64
+            content = base64.b64decode(file_data["content"]).decode('utf-8')
+            return content.splitlines()
+        return []
+    except:
+        return []
 
 def save_user(user_id):
-    try:
-        with open(USERS_FILE, "r") as f:
-            users = f.read().splitlines()
-        if str(user_id) not in users:
-            with open(USERS_FILE, "a") as f:
-                f.write(f"{user_id}\n")
-    except:
-        with open(USERS_FILE, "w") as f:
-            f.write(f"{user_id}\n")
+    users = load_users_from_github()
+    if str(user_id) not in users:
+        users.append(str(user_id))
+        save_users_to_github(users)
+        return True
+    return False
 
 def get_users_count():
-    try:
-        with open(USERS_FILE, "r") as f:
-            return len(f.read().splitlines())
-    except:
-        return 0
+    return len(load_users_from_github())
 
 LANGUAGES = {
     "english": {
         "welcome": "🤖 FOREX ANALYSIS BOT\n━━━━━━━━━━━━━━━━━━━━\n\nWelcome to AI Forex Analysis! 👋",
         "news_title": "📰 LATEST MARKET NEWS\n━━━━━━━━━━━━━━━━━━━━\n\n",
-        "no_news": "No breaking news at the moment.",
         "users": "👥 Total Users:",
         "admin_panel": "👑 ADMIN PANEL\n━━━━━━━━━━━━━━━━━━━━",
         "settings": "⚙️ SETTINGS\n━━━━━━━━━━━━━━━━━━━━\n\nSelect your language:",
@@ -58,7 +98,6 @@ LANGUAGES = {
     "german": {
         "welcome": "🤖 FOREX ANALYSIS BOT\n━━━━━━━━━━━━━━━━━━━━\n\nWillkommen beim KI-Forex-Analyse-Bot! 👋",
         "news_title": "📰 NEUESTE MARKTNACHRICHTEN\n━━━━━━━━━━━━━━━━━━━━\n\n",
-        "no_news": "Aktuell keine Breaking News.",
         "users": "👥 Gesamtbenutzer:",
         "admin_panel": "👑 ADMIN-BEREICH\n━━━━━━━━━━━━━━━━━━━━",
         "settings": "⚙️ EINSTELLUNGEN\n━━━━━━━━━━━━━━━━━━━━\n\nWähle deine Sprache:",
@@ -82,7 +121,6 @@ LANGUAGES = {
     "french": {
         "welcome": "🤖 FOREX ANALYSIS BOT\n━━━━━━━━━━━━━━━━━━━━\n\nBienvenue sur l'analyse Forex IA! 👋",
         "news_title": "📰 DERNIÈRES ACTUALITÉS\n━━━━━━━━━━━━━━━━━━━━\n\n",
-        "no_news": "Pas d'actualités pour le moment.",
         "users": "👥 Utilisateurs totaux:",
         "admin_panel": "👑 PANEL ADMIN\n━━━━━━━━━━━━━━━━━━━━",
         "settings": "⚙️ PARAMÈTRES\n━━━━━━━━━━━━━━━━━━━━\n\nChoisis ta langue:",
@@ -106,7 +144,6 @@ LANGUAGES = {
     "spanish": {
         "welcome": "🤖 FOREX ANALYSIS BOT\n━━━━━━━━━━━━━━━━━━━━\n\n¡Bienvenido al análisis Forex con IA! 👋",
         "news_title": "📰 ÚLTIMAS NOTICIAS\n━━━━━━━━━━━━━━━━━━━━\n\n",
-        "no_news": "No hay noticias de último momento.",
         "users": "👥 Usuarios totales:",
         "admin_panel": "👑 PANEL ADMIN\n━━━━━━━━━━━━━━━━━━━━",
         "settings": "⚙️ CONFIGURACIÓN\n━━━━━━━━━━━━━━━━━━━━\n\nSelecciona tu idioma:",
@@ -130,7 +167,6 @@ LANGUAGES = {
     "chinese": {
         "welcome": "🤖 外汇分析机器人\n━━━━━━━━━━━━━━━━━━━━\n\n欢迎使用AI外汇分析！👋",
         "news_title": "📰 最新市场新闻\n━━━━━━━━━━━━━━━━━━━━\n\n",
-        "no_news": "暂无重大新闻。",
         "users": "👥 总用户数:",
         "admin_panel": "👑 管理员面板\n━━━━━━━━━━━━━━━━━━━━",
         "settings": "⚙️ 设置\n━━━━━━━━━━━━━━━━━━━━\n\n选择你的语言:",
@@ -438,17 +474,4 @@ async def set_alert(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             return
         symbol = args[0].upper()
         price = float(args[1])
-        await update.message.reply_text(f"✅ Alert set for {symbol} at {price}\n\nYou will be notified when price reaches this level!")
-    except:
-        await update.message.reply_text("❌ Invalid format. Use: /setalert EUR/USD 1.2000")
-
-def main():
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("setalert", set_alert))
-    app.add_handler(CallbackQueryHandler(button))
-    print("✅ Bot is running...")
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+        await update.message.reply_text(f
