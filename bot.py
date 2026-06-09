@@ -7,7 +7,12 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 API_KEY = os.environ.get("API_KEY")
 
+# Admin ID - Replace with your Telegram user ID
+ADMIN_ID = 8872922261  # Change this to your numeric ID from @userinfobot
+
+# Files
 ALERTS_FILE = "alerts.json"
+USERS_FILE = "users.txt"
 
 def load_alerts():
     try:
@@ -19,6 +24,24 @@ def load_alerts():
 def save_alerts(alerts):
     with open(ALERTS_FILE, "w") as f:
         json.dump(alerts, f)
+
+def save_user(user_id):
+    try:
+        with open(USERS_FILE, "r") as f:
+            users = f.read().splitlines()
+        if str(user_id) not in users:
+            with open(USERS_FILE, "a") as f:
+                f.write(f"{user_id}\n")
+    except FileNotFoundError:
+        with open(USERS_FILE, "w") as f:
+            f.write(f"{user_id}\n")
+
+def get_users_count():
+    try:
+        with open(USERS_FILE, "r") as f:
+            return len(f.read().splitlines())
+    except:
+        return 0
 
 MAJOR_PAIRS = {
     "EUR/USD": "EUR/USD",
@@ -124,15 +147,30 @@ def get_analysis(symbol):
 
 def get_news():
     try:
+        # Try different news API endpoint
         url = f"https://api.twelvedata.com/news?symbol=EUR/USD&apikey={API_KEY}"
         r = requests.get(url, timeout=10)
         data = r.json()
+        
+        # Check if news exists
         if "news" in data and len(data["news"]) > 0:
-            news = data["news"][0]
-            return f"📰 Latest News:\n\n{news.get('title', 'No title')}\n\n{news.get('summary', 'No summary')[:200]}..."
-        return "📰 No important news found."
-    except:
-        return "📰 Unable to fetch news at this time."
+            news_list = data["news"][:3]  # Get latest 3 news
+            result = "📰 **Latest Market News**\n━━━━━━━━━━━━━━━━━━━━\n\n"
+            for news in news_list:
+                title = news.get('title', 'No title')
+                source = news.get('source', 'Unknown')
+                result += f"📌 **{title}**\n📡 Source: {source}\n\n"
+            return result
+        else:
+            # Fallback to forex news API
+            fallback_url = f"https://api.twelvedata.com/earnings?symbol=EUR/USD&apikey={API_KEY}"
+            r2 = requests.get(fallback_url, timeout=10)
+            data2 = r2.json()
+            if "data" in data2 and len(data2["data"]) > 0:
+                return "📰 **Economic Calendar**\n━━━━━━━━━━━━━━━━━━━━\n\nNo major news today."
+            return "📰 No breaking news at the moment.\n\n💡 Tip: Check major economic events on Forex Factory."
+    except Exception as e:
+        return f"📰 Market news temporarily unavailable.\n\n💡 For latest updates, visit:\n• Forex Factory\n• Bloomberg\n• Reuters"
 
 def format_analysis(d):
     return (
@@ -167,14 +205,23 @@ def main_menu_kb():
         [InlineKeyboardButton("📊 Forex Currencies", callback_data="menu_currencies")],
         [InlineKeyboardButton("🔔 Price Alert", callback_data="menu_alerts"),
          InlineKeyboardButton("📰 Market News", callback_data="market_news")],
-        [InlineKeyboardButton("⚙️ Settings", callback_data="menu_settings")],
+        [InlineKeyboardButton("⚙️ Settings", callback_data="menu_settings"),
+         InlineKeyboardButton("👑 Admin", callback_data="admin_panel")],
     ])
 
 def settings_kb():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🌍 Language", callback_data="set_lang")],
-        [InlineKeyboardButton("📊 Default Pairs", callback_data="set_pairs")],
-        [InlineKeyboardButton("🔕 Alert Sound", callback_data="set_sound")],
+        [InlineKeyboardButton("🌍 Language (English)", callback_data="set_lang")],
+        [InlineKeyboardButton("📊 Default Pair (EUR/USD)", callback_data="set_pairs")],
+        [InlineKeyboardButton("🔔 Alert Sound (ON)", callback_data="set_sound")],
+        [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")],
+    ])
+
+def admin_kb():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📊 Total Users", callback_data="admin_stats")],
+        [InlineKeyboardButton("📨 Broadcast Message", callback_data="admin_broadcast")],
+        [InlineKeyboardButton("📈 Bot Status", callback_data="admin_status")],
         [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")],
     ])
 
@@ -202,6 +249,8 @@ def after_analysis_kb(symbol, back):
     ])
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    save_user(user_id)
     await update.message.reply_text(
         "🤖 FOREX ANALYSIS BOT\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -224,6 +273,57 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await q.edit_message_text(
             "⚙️ Settings\n━━━━━━━━━━━━━━━━━━━━\n\nChoose an option:",
             reply_markup=settings_kb()
+        )
+    elif data == "admin_panel":
+        if update.effective_user.id != ADMIN_ID:
+            await q.edit_message_text("⛔ Only admin can access this panel!")
+            return
+        await q.edit_message_text(
+            "👑 Admin Panel\n━━━━━━━━━━━━━━━━━━━━\n\nWelcome Admin!",
+            reply_markup=admin_kb()
+        )
+    elif data == "admin_stats":
+        if update.effective_user.id != ADMIN_ID:
+            await q.edit_message_text("⛔ Access denied!")
+            return
+        users_count = get_users_count()
+        await q.edit_message_text(
+            f"📊 Bot Statistics\n━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"👥 Total Users: {users_count}\n"
+            f"✅ Bot Status: Active\n"
+            f"📈 Uptime: 24/7",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Back to Admin", callback_data="admin_panel"),
+                 InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
+            ])
+        )
+    elif data == "admin_status":
+        if update.effective_user.id != ADMIN_ID:
+            await q.edit_message_text("⛔ Access denied!")
+            return
+        await q.edit_message_text(
+            "📈 Bot Status\n━━━━━━━━━━━━━━━━━━━━\n\n"
+            "✅ Bot is running smoothly\n"
+            "🌐 Hosted on Railway\n"
+            "🕐 24/7 Active\n"
+            "🔗 GitHub: forex-analysis-bot",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Back to Admin", callback_data="admin_panel"),
+                 InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
+            ])
+        )
+    elif data == "admin_broadcast":
+        if update.effective_user.id != ADMIN_ID:
+            await q.edit_message_text("⛔ Access denied!")
+            return
+        ctx.user_data['broadcast_mode'] = True
+        await q.edit_message_text(
+            "📨 Broadcast Mode Activated\n━━━━━━━━━━━━━━━━━━━━\n\n"
+            "Send me the message you want to broadcast to all users.\n\n"
+            "Type /cancel to exit broadcast mode.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
+            ])
         )
     elif data == "menu_alerts":
         alerts = load_alerts()
@@ -255,9 +355,9 @@ async def button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         )
     elif data in ["set_lang", "set_pairs", "set_sound"]:
         await q.edit_message_text(
-            "🚧 Coming Soon!\nThis feature will be available soon.",
+            "✅ Feature Coming Soon!\nThis setting will be available in the next update.",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Back", callback_data="menu_settings")]
+                [InlineKeyboardButton("🔙 Back to Settings", callback_data="menu_settings")]
             ])
         )
     elif data.startswith("alert_"):
@@ -323,10 +423,45 @@ async def set_alert(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     except:
         await update.message.reply_text("❌ Invalid format. Use: /setalert EUR/USD 1.2000")
 
+async def broadcast(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("⛔ Only admin can broadcast!")
+        return
+    
+    if ctx.user_data.get('broadcast_mode'):
+        message_text = update.message.text
+        if message_text == '/cancel':
+            ctx.user_data['broadcast_mode'] = False
+            await update.message.reply_text("❌ Broadcast mode cancelled.")
+            return
+        
+        await update.message.reply_text("📨 Sending broadcast to all users...")
+        
+        try:
+            with open(USERS_FILE, "r") as f:
+                users = f.read().splitlines()
+            
+            success = 0
+            fail = 0
+            
+            for user_id in users:
+                try:
+                    await ctx.bot.send_message(chat_id=int(user_id), text=f"📢 **Announcement**\n\n{message_text}")
+                    success += 1
+                except:
+                    fail += 1
+            
+            await update.message.reply_text(f"✅ Broadcast complete!\n\n✅ Sent: {success}\n❌ Failed: {fail}")
+        except Exception as e:
+            await update.message.reply_text(f"❌ Error: {e}")
+        
+        ctx.user_data['broadcast_mode'] = False
+
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("setalert", set_alert))
+    app.add_handler(CommandHandler("broadcast", broadcast))
     app.add_handler(CallbackQueryHandler(button))
     print("✅ Bot is running...")
     app.run_polling()
